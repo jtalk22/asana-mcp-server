@@ -18,6 +18,12 @@ workspace, project, and task your account can see or change. Treat it like a pas
 - The three irreversible tools (`asana_delete_task`, `asana_delete_project`,
   `asana_delete_section`) are no-ops without `confirm: true` and carry the MCP
   `destructiveHint` annotation so clients can gate them.
+- `asana_batch_ops` accepts GET actions only in both its schema and runtime
+  validation. Write or delete methods are rejected before any request is sent.
+- `asana_attach_file` is a no-op without `confirm: true`. Confirmed paths must
+  resolve inside the current working directory or a path listed in
+  `ASANA_MCP_FILE_ROOTS` (use the platform path delimiter for multiple roots).
+  Symlink targets are checked after resolution and files over 100MB are rejected.
 - Every tool declares `readOnlyHint`/`destructiveHint`/`idempotentHint` annotations —
   clients that honor annotations can auto-allow reads and require approval for writes.
 - `ASANA_MCP_TOOLS=read` mounts a read-only surface: the write tools are not advertised

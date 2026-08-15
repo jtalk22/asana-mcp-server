@@ -1,7 +1,7 @@
 {
   "name": "@jtalk22/asana-mcp",
-  "version": "1.0.0",
-  "description": "Change Asana without opening Asana. 75-tool MCP server over the Asana REST API \u2014 custom fields that stick, section moves, start dates, rich notes, bulk edits, board-schema design, one-call briefs. PAT + stdio, local-first, every tool MCP-annotated.",
+  "version": "1.0.1",
+  "description": "Change Asana without opening Asana. 75-tool MCP server over the Asana REST API — custom fields that stick, section moves, start dates, rich notes, bulk edits, board-schema design, one-call briefs. PAT + stdio, local-first, every tool MCP-annotated.",
   "type": "module",
   "main": "src/server.js",
   "bin": {
@@ -20,7 +20,7 @@
   ],
   "scripts": {
     "start": "node src/server.js",
-    "test": "node --test test/client.test.js test/config.test.js test/html.test.js test/tools-schema.test.js",
+    "test": "node --test test/client.test.js test/config.test.js test/html.test.js test/safety.test.js test/tools-schema.test.js",
     "doctor": "node src/cli.js --doctor",
     "api-docs": "node scripts/measure-tool-schema.js --markdown > docs/API.md",
     "check:parity": "node scripts/check-version-parity.js",
