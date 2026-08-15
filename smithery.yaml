@@ -1,0 +1,36 @@
+# Smithery configuration for asana-mcp-server
+# https://smithery.ai/docs/build/project-config/smithery-yaml
+# Change Asana without opening Asana: the writes the official MCP can't do —
+# custom fields that stick, section moves, start dates, rich notes, bulk edits —
+# over a plain Personal Access Token. Local-first stdio; no OAuth app to register.
+
+startCommand:
+  type: stdio
+  configSchema:
+    type: object
+    properties:
+      asanaPat:
+        type: string
+        title: "Asana Personal Access Token"
+        description: "Create at https://app.asana.com/0/my-apps → Personal access tokens."
+      asanaWorkspaceGid:
+        type: string
+        title: "Workspace GID"
+        description: "Optional — auto-detected when the token sees exactly one workspace."
+      asanaMcpTools:
+        type: string
+        title: "Tool surface"
+        description: "all | read | write | comma-list of tool names"
+        default: "all"
+    required: ["asanaPat"]
+    additionalProperties: false
+  commandFunction: |-
+    (config) => ({
+      command: 'node',
+      args: ['src/server.js'],
+      env: {
+        ASANA_PAT: config.asanaPat,
+        ...(config.asanaWorkspaceGid && { ASANA_WORKSPACE_GID: config.asanaWorkspaceGid }),
+        ...(config.asanaMcpTools && { ASANA_MCP_TOOLS: config.asanaMcpTools })
+      }
+    })

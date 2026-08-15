@@ -1,0 +1,135 @@
+name: Attribution Guardrail
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  attribution:
+    runs-on: ubuntu-latest
+    if: >-
+      github.actor != 'dependabot[bot]' &&
+      (github.event_name != 'pull_request' || github.event.pull_request.user.login != 'dependabot[bot]')
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+
+      - name: Fetch attribution refs
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          fetch_if_missing() {
+            local sha="$1"
+            [[ -n "$sha" ]] || return 0
+            if git rev-parse --verify "${sha}^{commit}" >/dev/null 2>&1; then
+              return 0
+            fi
+            git fetch --no-tags origin "$sha"
+          }
+
+          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            fetch_if_missing "${{ github.event.pull_request.base.sha }}"
+            fetch_if_missing "${{ github.event.pull_request.head.sha }}"
+          elif [[ "${{ github.event_name }}" == "push" ]]; then
+            BEFORE="${{ github.event.before }}"
+            if [[ -n "$BEFORE" && "$BEFORE" != "0000000000000000000000000000000000000000" ]]; then
+              fetch_if_missing "$BEFORE"
+            fi
+            fetch_if_missing "${{ github.sha }}"
+          fi
+
+      - name: Determine commit range
+        id: commit_range
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          fallback_range() {
+            local head_sha="$1"
+            if git rev-parse --verify "${head_sha}^" >/dev/null 2>&1; then
+              printf '%s^..%s\n' "$head_sha" "$head_sha"
+            else
+              printf '%s\n' "$head_sha"
+            fi
+          }
+
+          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            RANGE="${{ github.event.pull_request.base.sha }}..${{ github.event.pull_request.head.sha }}"
+          elif [[ "${{ github.event_name }}" == "push" ]]; then
+            BEFORE="${{ github.event.before }}"
+            HEAD_SHA="${{ github.sha }}"
+            CANDIDATE="${BEFORE}..${HEAD_SHA}"
+
+            if [[ -z "$BEFORE" || "$BEFORE" == "0000000000000000000000000000000000000000" ]]; then
+              RANGE="$(fallback_range "$HEAD_SHA")"
+              echo "Push event.before is empty/zero; using fallback range: $RANGE"
+            elif ! git rev-parse --verify "${BEFORE}^{commit}" >/dev/null 2>&1; then
+              RANGE="$(fallback_range "$HEAD_SHA")"
+              echo "Push event.before commit not found; using fallback range: $RANGE"
+            elif git rev-list --count "$CANDIDATE" >/dev/null 2>&1; then
+              RANGE="$CANDIDATE"
+            else
+              RANGE="$(fallback_range "$HEAD_SHA")"
+              echo "Push candidate range invalid; using fallback range: $RANGE"
+            fi
+          else
+            RANGE="origin/main..HEAD"
+          fi
+
+          echo "range=$RANGE" >> "$GITHUB_OUTPUT"
+          echo "Using range: $RANGE"
+
+      - name: Verify owner-only attribution
+        env:
+          EXPECTED_GIT_NAME: jtalk22
+          EXPECTED_GIT_EMAIL: ${{ vars.OWNER_GIT_EMAIL }}
+          IS_FORK_PR: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.fork }}
+          SKIP_LOCAL_CONFIG_CHECK: "1"
+          ALLOW_GITHUB_WEB_COMMITTER: "1"
+        run: |
+          bash scripts/check-owner-attribution.sh "${{ steps.commit_range.outputs.range }}"
+
+      - name: Validate release and issue templates (if changed)
+        shell: bash
+        run: |
+          set -euo pipefail
+          RANGE="${{ steps.commit_range.outputs.range }}"
+          changed="$(git diff --name-only "$RANGE" || true)"
+
+          if [[ -z "$changed" ]]; then
+            echo "No changed files found in range."
+            exit 0
+          fi
+
+          target_files="$(printf '%s\n' "$changed" | rg -N '(^\.github/RELEASE_NOTES_TEMPLATE\.md$|^\.github/ISSUE_REPLY_TEMPLATE\.md$|^docs/COMMUNICATION-STYLE\.md$|^CHANGELOG\.md$)' || true)"
+
+          if [[ -z "$target_files" ]]; then
+            echo "No communication template files changed."
+            exit 0
+          fi
+
+          disallowed='(?i)(co-authored-by|generated with|\bclaude\b|\bgpt\b|\bcopilot\b|\bgemini\b|\bai\b)'
+          found=0
+
+          while IFS= read -r file; do
+            [[ -n "$file" ]] || continue
+            echo "Scanning added lines in $file"
+            # Only inspect lines ADDED in this range. Frozen history (e.g. CHANGELOG
+            # release notes that legitimately name tool brands) is never re-scanned.
+            added="$(git diff "$RANGE" -- "$file" | grep -E '^\+' | grep -Ev '^\+\+\+' | sed -E 's/^\+//' || true)"
+            [[ -n "$added" ]] || continue
+            if printf '%s\n' "$added" | rg -Nni "$disallowed"; then
+              found=1
+            fi
+          done <<< "$target_files"
+
+          if [[ "$found" -ne 0 ]]; then
+            echo "Disallowed attribution markers found in NEWLY ADDED communication-template lines."
+            echo "Remove attribution markers from the added lines listed above."
+            exit 1
+          fi

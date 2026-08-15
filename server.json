@@ -1,0 +1,45 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.jtalk22/asana-mcp-server",
+  "title": "Asana MCP Server",
+  "description": "Change Asana without opening Asana. Custom fields, sections, start dates, rich notes, bulk edits. PAT auth.",
+  "websiteUrl": "https://github.com/jtalk22/asana-mcp-server",
+  "repository": {
+    "url": "https://github.com/jtalk22/asana-mcp-server",
+    "source": "github"
+  },
+  "version": "1.0.0",
+  "packages": [
+    {
+      "registryType": "npm",
+      "identifier": "@jtalk22/asana-mcp",
+      "version": "1.0.0",
+      "transport": {
+        "type": "stdio"
+      },
+      "environmentVariables": [
+        {
+          "description": "Asana Personal Access Token (create at https://app.asana.com/0/my-apps). Optional when stored via `asana-mcp --setup` (macOS Keychain or ~/.asana-mcp.json).",
+          "isRequired": false,
+          "format": "string",
+          "isSecret": true,
+          "name": "ASANA_PAT"
+        },
+        {
+          "description": "Workspace GID. Optional — auto-detected when the token sees exactly one workspace.",
+          "isRequired": false,
+          "format": "string",
+          "isSecret": false,
+          "name": "ASANA_WORKSPACE_GID"
+        },
+        {
+          "description": "Tool surface filter: all | read | write | comma-list of tool names.",
+          "isRequired": false,
+          "format": "string",
+          "isSecret": false,
+          "name": "ASANA_MCP_TOOLS"
+        }
+      ]
+    }
+  ]
+}

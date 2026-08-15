@@ -1,0 +1,155 @@
+name: Publish to npm
+
+on:
+  release:
+    types: [created]
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+
+      - name: Setup Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: '20.x'
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Resolve release version
+        id: version
+        shell: bash
+        run: |
+          set -euo pipefail
+          VERSION="${GITHUB_REF_NAME#v}"
+          if [[ -z "$VERSION" || "$VERSION" == "$GITHUB_REF_NAME" ]]; then
+            echo "Unable to resolve semver from tag '$GITHUB_REF_NAME'" >&2
+            exit 1
+          fi
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "Resolved release version: $VERSION"
+
+      - name: Check npm for existing version
+        id: npm_check
+        shell: bash
+        run: |
+          set -euo pipefail
+          VERSION="${{ steps.version.outputs.version }}"
+          if npm view "@jtalk22/asana-mcp@$VERSION" version >/dev/null 2>&1; then
+            echo "already_published=true" >> "$GITHUB_OUTPUT"
+            echo "Version $VERSION already exists on npm. Skipping publish."
+          else
+            echo "already_published=false" >> "$GITHUB_OUTPUT"
+            echo "Version $VERSION not found on npm. Proceeding with publish."
+          fi
+
+      - name: Verify npm publish auth
+        if: steps.npm_check.outputs.already_published != 'true'
+        run: bash scripts/check-npm-publish-auth.sh
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_SECRET_TOKEN }}
+
+      - name: Publish to npm
+        if: steps.npm_check.outputs.already_published != 'true'
+        run: npm publish --provenance --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_SECRET_TOKEN }}
+
+      - name: Verify server.json matches release version
+        shell: bash
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          set -euo pipefail
+          SJ_VERSION="$(jq -r '.version' server.json)"
+          if [[ "$SJ_VERSION" != "$VERSION" ]]; then
+            echo "server.json version ($SJ_VERSION) does not match release version ($VERSION)" >&2
+            exit 1
+          fi
+
+      - name: Check MCP registry for existing version
+        id: registry_check
+        shell: bash
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          set -euo pipefail
+          VERSIONS_URL="https://registry.modelcontextprotocol.io/v0/servers/io.github.jtalk22%2Fasana-mcp-server/versions"
+          # Distinguish "version not listed" from a failed lookup: only a 200 with the
+          # version absent (or a 404 for a never-published server) may proceed to publish.
+          HTTP_CODE="$(curl -sSL -o /tmp/registry-versions.json -w '%{http_code}' "$VERSIONS_URL")" || {
+            echo "MCP registry lookup failed (network error)" >&2
+            exit 1
+          }
+          if [[ "$HTTP_CODE" == "404" ]]; then
+            echo "already_published=false" >> "$GITHUB_OUTPUT"
+            echo "Server not found in the MCP registry. Proceeding with first registry publish."
+          elif [[ "$HTTP_CODE" != "200" ]]; then
+            echo "MCP registry lookup failed with HTTP $HTTP_CODE" >&2
+            exit 1
+          elif jq -e --arg v "$VERSION" '[.servers[] | (.server.version // .version)] | index($v) != null' /tmp/registry-versions.json >/dev/null; then
+            echo "already_published=true" >> "$GITHUB_OUTPUT"
+            echo "Version $VERSION already exists in the MCP registry. Skipping registry publish."
+          else
+            echo "already_published=false" >> "$GITHUB_OUTPUT"
+            echo "Version $VERSION not found in the MCP registry. Proceeding with registry publish."
+          fi
+
+      - name: Wait for npm propagation
+        if: steps.registry_check.outputs.already_published != 'true'
+        shell: bash
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          set -euo pipefail
+          # The registry validates the exact npm version exists before accepting a publish.
+          for i in $(seq 1 10); do
+            if npm view "@jtalk22/asana-mcp@$VERSION" version >/dev/null 2>&1; then
+              echo "npm has $VERSION."
+              exit 0
+            fi
+            echo "npm does not show $VERSION yet (attempt $i/10); waiting 15s..."
+            sleep 15
+          done
+          echo "npm version $VERSION not visible after 10 attempts" >&2
+          exit 1
+
+      - name: Verify live npm description matches package.json
+        if: steps.npm_check.outputs.already_published != 'true'
+        shell: bash
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          set -euo pipefail
+          # npm metadata is immutable per version; a stale description on the live
+          # surface can only heal on the next publish. Catch the mismatch NOW,
+          # while this run can still be diagnosed, instead of months later.
+          EXPECTED="$(jq -r '.description' package.json)"
+          for i in $(seq 1 10); do
+            LIVE="$(npm view "@jtalk22/asana-mcp@$VERSION" description 2>/dev/null || true)"
+            if [[ "$LIVE" == "$EXPECTED" ]]; then
+              echo "Live npm description matches package.json."
+              exit 0
+            fi
+            echo "Live description not settled yet (attempt $i/10); waiting 15s..."
+            sleep 15
+          done
+          echo "Live npm description does not match package.json after 10 attempts." >&2
+          echo "expected: $EXPECTED" >&2
+          echo "live:     $LIVE" >&2
+          exit 1
+
+      - name: Publish to MCP registry
+        if: steps.registry_check.outputs.already_published != 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -fsSL "https://github.com/modelcontextprotocol/registry/releases/latest/download/mcp-publisher_$(uname -s | tr '[:upper:]' '[:lower:]')_$(uname -m | sed 's/x86_64/amd64/;s/aarch64/arm64/').tar.gz" | tar xz mcp-publisher
+          ./mcp-publisher login github-oidc
+          ./mcp-publisher publish

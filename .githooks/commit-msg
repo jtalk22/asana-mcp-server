@@ -1,0 +1,27 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+msg_file="${1:-}"
+[[ -n "$msg_file" && -f "$msg_file" ]] || {
+  echo "commit-msg hook: missing commit message file." >&2
+  exit 1
+}
+
+banned_regex='(?i)(co-authored-by|generated with|\bclaude\b|\bgpt\b|\bcopilot\b|\bgemini\b|\bai\b)'
+
+contains_banned() {
+  if command -v rg >/dev/null 2>&1; then
+    rg -Niq "$banned_regex" "$msg_file"
+  else
+    grep -Eiq '(Co-authored-by|Generated with|Claude|GPT|Copilot|Gemini)' "$msg_file" \
+      || grep -Eiq '(^|[^[:alnum:]_])[Aa][Ii]([^[:alnum:]_]|$)' "$msg_file"
+  fi
+}
+
+if contains_banned; then
+  cat >&2 <<'EOF'
+Commit message blocked by owner-attribution guardrail.
+Remove tooling/model attribution markers and retry.
+EOF
+  exit 1
+fi
