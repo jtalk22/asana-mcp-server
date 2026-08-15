@@ -2,7 +2,7 @@
   "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
   "name": "io.github.jtalk22/asana-mcp-server",
   "title": "Asana MCP Server",
-  "description": "Change Asana without opening Asana. Custom fields, sections, start dates, rich notes, bulk edits. PAT auth.",
+  "description": "Change Asana without opening Asana \u2014 custom fields, sections, start dates, rich notes, bulk. PAT.",
   "websiteUrl": "https://github.com/jtalk22/asana-mcp-server",
   "repository": {
     "url": "https://github.com/jtalk22/asana-mcp-server",
@@ -26,7 +26,7 @@
           "name": "ASANA_PAT"
         },
         {
-          "description": "Workspace GID. Optional — auto-detected when the token sees exactly one workspace.",
+          "description": "Workspace GID. Optional \u2014 auto-detected when the token sees exactly one workspace.",
           "isRequired": false,
           "format": "string",
           "isSecret": false,
