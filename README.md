@@ -4,7 +4,7 @@
 
 <p><strong>Change Asana without opening Asana.</strong></p>
 
-<p>Custom fields that stick, section moves, start dates, rich notes, and bulk edits — the writes the official MCP still can't do, over a plain Personal Access Token.</p>
+<p>A local-first Asana MCP over the REST API: controlled writes, schema operations, diagnostics, and one-call briefs over a Personal Access Token.</p>
 
 ```bash
 npx -y @jtalk22/asana-mcp --setup
@@ -27,19 +27,21 @@ npx -y @jtalk22/asana-mcp --setup
 
 ## Why this exists
 
-Asana ships an official MCP server. It's OAuth-only, and its tool surface went from 44 tools (V1) to ~26 (V2). As of mid-2026 it cannot:
+Asana's official V2 MCP server is the supported hosted choice: OAuth, workspace-scoped access, consolidated task writes, and interactive confirmations in supported clients. Its tool set changes over time, so use Asana's [current tools reference](https://developers.asana.com/docs/mcp-tools-reference) rather than a frozen comparison table.
 
-| You ask the agent to… | Official MCP (V2) | This server |
-|---|---|---|
-| Set a custom field when creating a task | Not supported — confirmed by Asana staff on the forum (May 2026, "no timeline") | `asana_create_task` / `asana_set_custom_fields`, with the `{"date": …}` wrapper and `multi_enum` arrays handled |
-| Move a task to another section | No section operations | `asana_move_section`, `asana_bulk_move_section`, `asana_add_to_project` with reliable section placement (2-step, because `addProject`'s `section` param is not) |
-| Set a start date | `start_on` not exposed | `asana_set_dates` (orders `due_on` first — `start_on` silently fails otherwise) |
-| Write rich-text task notes | No `html_notes` on tasks | `asana_set_html_notes` with the `<body>`-root fix and a whitelist sanitizer (`<h2>`/`<p>`/`<b>` won't 400 or render as escaped text) |
-| Edit 60 tasks at once | Bulk caps at 50, no `/batch` | `asana_bulk_update` / `asana_bulk_move_section` — paginated loops that continue past individual failures and report per-task results |
-| Search on a free workspace | `search_tasks` is Premium-only | `asana_typeahead` + paginated list tools work on every tier |
-| Build the board itself | No schema tools | `asana_create_custom_field`, `asana_add_enum_option`, `asana_add_field_to_project`, sections, templates + async-job polling |
+Choose this server when you want a transparent local stdio process and direct REST coverage:
 
-No OAuth app to register, no admin queue: create a [Personal Access Token](https://app.asana.com/0/my-apps), run `--setup`, done. Local-first — the server talks only to `app.asana.com`; nothing else, ever.
+| Need | This server's approach |
+|---|---|
+| Local operation | PAT + stdio. No hosted intermediary and no product telemetry. |
+| Controlled agent surface | Mount `read`, `write`, `all`, or an explicit comma-list of tools. |
+| Board and field design | Create fields and enum options, attach fields to projects, create/reorder sections, and instantiate templates. |
+| Reliable REST edge cases | Typed custom-field values, section placement, rich task notes, start/due ordering, pagination, and bounded retry. |
+| Large or repetitive work | Bulk loops continue past individual failures and report per-item outcomes. |
+| Fewer agent round-trips | Morning briefs, user queues, portfolio rollups, board rollups, and inbox triage return decision-ready results. |
+| Local diagnostics | `--doctor`, explicit workspace detection, generated tool reference, and release preflight. |
+
+You can use both: the official service for managed OAuth and this package for local-first REST workflows or capabilities your operating model needs. To use this package, create a [Personal Access Token](https://app.asana.com/0/my-apps), run `--setup`, and keep the process on your machine. It talks only to `app.asana.com`.
 
 ## Install
 
