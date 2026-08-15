@@ -20,7 +20,7 @@
   ],
   "scripts": {
     "start": "node src/server.js",
-    "test": "node --test 'test/*.test.js'",
+    "test": "node --test test/client.test.js test/config.test.js test/html.test.js test/tools-schema.test.js",
     "doctor": "node src/cli.js --doctor",
     "api-docs": "node scripts/measure-tool-schema.js --markdown > docs/API.md",
     "check:parity": "node scripts/check-version-parity.js",
