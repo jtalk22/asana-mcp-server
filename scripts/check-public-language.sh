@@ -11,7 +11,10 @@ fail=0
 if grep -nE '\b1[0-9]{15}\b' "${FILES[@]}" 2>/dev/null; then
   echo "ERROR: 16-digit GID literal in a public surface" >&2; fail=1
 fi
-if grep -niE 'gwen|revasser|dispute board|disputes board' "${FILES[@]}" 2>/dev/null; then
+# Keep the operator-estate name blocked while allowing the intentional public
+# company hostname revasserlabs.com. A following non-letter still catches the
+# standalone name and private-domain forms such as revasser.nyc.
+if grep -niE 'gwen|revasser([^a-z]|$)|dispute board|disputes board' "${FILES[@]}" 2>/dev/null; then
   echo "ERROR: estate name in a public surface" >&2; fail=1
 fi
 # 2) banned framing (README + manifests only — docs may quote them when comparing)

@@ -19,6 +19,7 @@ npx -y @jtalk22/asana-mcp --setup
   <a href="#install">Install</a> ·
   <a href="#75-tools-read-act-design">75 tools</a> ·
   <a href="#composites-one-call-one-answer">Composites</a> ·
+  <a href="#slack--asana-continuity-preview">Slack + Asana</a> ·
   <a href="#honest-limits">Honest limits</a> ·
   <a href="docs/API.md">API reference</a>
 </p>
@@ -42,6 +43,29 @@ Choose this server when you want a transparent local stdio process and direct RE
 | Local diagnostics | `--doctor`, explicit workspace detection, generated tool reference, and release preflight. |
 
 You can use both: the official service for managed OAuth and this package for local-first REST workflows or capabilities your operating model needs. To use this package, create a [Personal Access Token](https://app.asana.com/0/my-apps), run `--setup`, and keep the process on your machine. It talks only to `app.asana.com`.
+
+## Slack + Asana continuity preview
+
+This package remains the full 75-tool, MIT-licensed local server. Nothing below is an unlock for missing tools.
+
+The same maintainer is also building [Keep the Thread](https://mcp.revasserlabs.com/workflows), a managed continuity layer for an independent operator or two-to-five-person team that already works in Slack and Asana but does not want another dashboard. Its first cross-tool contract asks a narrower question:
+
+> Which Slack commitment is missing, incomplete, or stale in one selected Asana project?
+
+```mermaid
+flowchart LR
+    Slack["1–5 selected Slack channels"] --> Report["continuity_asana_discrepancy_report"]
+    Asana["1 selected Asana project\nincomplete tasks only"] --> Report
+    Report --> Gaps["matched commitments · gaps · task drift · next reviews"]
+    Gaps --> Receipt["source IDs preserved\nwrites_performed: 0"]
+```
+
+| Choose | When it fits |
+|---|---|
+| **This open-source package** | You want local stdio, your own PAT, all 75 Asana REST tools, controlled writes, board/schema design, and no hosted intermediary. |
+| **Keep the Thread preview** | You want a managed remote MCP endpoint, official connector consent, Slack-to-Asana discrepancy reporting, saved continuity contracts, or scheduled Slack delivery. |
+
+The hosted Asana connector code is live and read-only, but public OAuth activation is still staged. See the [representative input/output contract](https://mcp.revasserlabs.com/workflows), inspect the [live connector status](https://mcp.revasserlabs.com/api/v1/asana/oauth/status), or request a bounded [deployment review](https://mcp.revasserlabs.com/deployment). Creating, updating, completing, or deleting Asana tasks is not part of the hosted discrepancy report.
 
 ## Install
 
