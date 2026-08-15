@@ -1,0 +1,54 @@
+{
+  "name": "@jtalk22/asana-mcp",
+  "version": "1.0.0",
+  "description": "Change Asana without opening Asana. 75-tool MCP server over the Asana REST API — custom fields that stick, section moves, start dates, rich notes, bulk edits, board-schema design, one-call briefs. PAT + stdio, local-first, every tool MCP-annotated.",
+  "type": "module",
+  "main": "src/server.js",
+  "bin": {
+    "asana-mcp": "src/cli.js",
+    "asana-mcp-server": "src/server.js"
+  },
+  "files": [
+    "src/",
+    "lib/",
+    "docs/API.md",
+    "docs/SETUP.md",
+    "docs/TROUBLESHOOTING.md",
+    "README.md",
+    "LICENSE",
+    "server.json"
+  ],
+  "scripts": {
+    "start": "node src/server.js",
+    "test": "node --test test/",
+    "doctor": "node src/cli.js --doctor",
+    "api-docs": "node scripts/measure-tool-schema.js --markdown > docs/API.md",
+    "check:parity": "node scripts/check-version-parity.js",
+    "check:public": "bash scripts/check-public-language.sh",
+    "preflight": "node scripts/release-preflight.js"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jtalk22/asana-mcp-server.git"
+  },
+  "homepage": "https://github.com/jtalk22/asana-mcp-server#readme",
+  "bugs": {
+    "url": "https://github.com/jtalk22/asana-mcp-server/issues"
+  },
+  "keywords": [
+    "mcp", "mcp-server", "model-context-protocol", "asana", "asana-mcp", "asana-api",
+    "project-management", "task-management", "custom-fields", "bulk-operations",
+    "local-first", "personal-access-token", "ai-agents", "llm", "developer-tools",
+    "automation", "productivity", "claude", "claude-code", "cursor", "copilot",
+    "windsurf", "gemini-cli", "codex-cli", "triage", "morning-brief", "standup"
+  ],
+  "author": "James Lambert (jtalk22)",
+  "license": "MIT",
+  "mcpName": "io.github.jtalk22/asana-mcp-server",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.27.1"
+  }
+}
