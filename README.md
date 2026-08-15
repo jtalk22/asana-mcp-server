@@ -80,6 +80,8 @@ Workspace is auto-detected when your token sees exactly one. Tokens that see sev
 - **40 writes** — create/update/complete/assign, comments, followers, tags, dependencies, memberships, section moves, dates (`start_on` done right), custom fields (dates wrapped, `multi_enum` arrays), rich notes (sanitized), attachments (100MB uploads), bulk ops, project statuses, portfolios, templates with async-job polling, and `asana_set_notes_safe` for boards where automations rewrite what you just wrote.
 - **6 schema/design tools** — create custom fields, extend dropdowns, attach fields to projects, sections, reorder: the agent can *build* the board, not just fill it.
 - **3 destructive** — `delete_task` / `delete_project` / `delete_section` refuse to run without `confirm: true`.
+- **Local file boundary** — `attach_file` requires `confirm: true` and only reads from the current directory or `ASANA_MCP_FILE_ROOTS`.
+- **Read-only batch** — `batch_ops` rejects every non-GET action at both schema and runtime layers.
 
 Every tool declares [MCP annotations](https://modelcontextprotocol.io/docs/concepts/tools#tool-annotations) — `readOnlyHint`, `destructiveHint`, `idempotentHint`, `openWorldHint`, titles. Clients that honor them (Claude Code does) auto-allow reads in plan mode, parallelize them safely, and gate the destructive three.
 

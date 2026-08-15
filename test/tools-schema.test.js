@@ -61,3 +61,14 @@ test('filterTools profiles', () => {
     ['asana_create_task', 'asana_get_task']);
   assert.throws(() => filterTools('asana_nope'), /unknown tools/);
 });
+
+test('batch schema is GET-only and file uploads disclose their confirmation gate', () => {
+  const batch = TOOLS.find((tool) => tool.name === 'asana_batch_ops');
+  assert.deepEqual(batch.inputSchema.properties.actions.items.properties.method.enum, ['GET']);
+  assert.equal(batch.inputSchema.properties.actions.items.additionalProperties, false);
+  assert.equal(batch.inputSchema.properties.actions.minItems, 1);
+
+  const attach = TOOLS.find((tool) => tool.name === 'asana_attach_file');
+  assert.ok(attach.inputSchema.properties.confirm);
+  assert.match(attach.description, /Requires confirm:true/);
+});

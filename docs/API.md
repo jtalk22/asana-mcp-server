@@ -260,9 +260,9 @@ Params: `task_gid`* · `project_gid`* · `section_gid`
 
 ### `asana_attach_file` `W`
 
-Attach a file (evidence PDF, screenshot, document) to an Asana task. Uploads via multipart/form-data. Max 100MB.
+Attach a local file to an Asana task. Requires confirm:true and restricts reads to the current directory or ASANA_MCP_FILE_ROOTS. Max 100MB.
 
-Params: `task_gid`* · `file_path`* · `file_name`
+Params: `task_gid`* · `file_path`* · `file_name` · `confirm`
 
 ### `asana_batch_ops` `W`
 
